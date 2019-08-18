@@ -1,21 +1,19 @@
 {
-  "short_name": "My Extension",
-  "name": "My Extension",
+  "short_name": "Console Script Injector",
+  "name": "Console Script Injector",
   "version": "1.0",
   "manifest_version": 2,
   "background": {
     "scripts": ["app/background.js"]
   },
   "browser_action": {},
-  "content_scripts" : [
+  "content_scripts": [
     {
-      "matches": [ "<all_urls>" ],
+      "matches": ["<all_urls>"],
       "css": ["/static/css/app.css"],
       "js": ["/static/js/content.js"]
     }
   ],
-  "web_accessible_resources":[
-    "/static/css/content.css"
-  ],
+  "web_accessible_resources": ["/static/css/content.css"],
   "content_security_policy": "script-src 'self' 'sha256-GgRxrVOKNdB4LrRsVPDSbzvfdV4UqglmviH9GoBJ5jk='; object-src 'self'"
 }

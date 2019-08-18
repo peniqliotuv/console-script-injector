@@ -1,89 +1,108 @@
 /*global chrome*/
 /* src/content.js */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Frame, { FrameContextConsumer } from 'react-frame-component';
 import './content.css';
 
-class Main extends React.Component {
-  state = {
-    scripts: {},
-    numScripts: 1
+const SCRIPT_KEY = 'injected-from-chrome-extension';
+
+const Main = () => {
+  const [scripts, setScripts] = useState({});
+  const [numScripts, setNumScripts] = useState(1);
+
+  useEffect(() => {
+    if (window.localStorage) {
+      const injectedScripts =
+        JSON.parse(window.localStorage.getItem(SCRIPT_KEY)) || {};
+      console.log(injectedScripts);
+      setNumScripts(
+        Object.keys(injectedScripts).length > 1
+          ? Object.keys(injectedScripts).length
+          : 1
+      );
+      setScripts(injectedScripts || {});
+      injectScriptsIntoDOM();
+      return saveToLocalStorage;
+    }
+  }, []);
+
+  const addScript = () => setNumScripts(numScripts + 1);
+
+  const handleInputChange = (e, i) => {
+    setScripts({ ...scripts, [i]: e.target.value });
   };
 
-  addScript = () =>
-    this.setState({
-      numScripts: this.state.numScripts + 1
-    });
-
-  handleInputChange = (e, i) => {
-    this.setState({
-      scripts: { ...this.state.scripts, [i]: e.target.value }
-    });
-  };
-
-  injectScripts = () => {
-    const scripts = [];
-    for (const key in this.state.scripts) {
+  const injectScriptsIntoDOM = () => {
+    const addedScripts = [];
+    for (const key in scripts) {
       const script = document.createElement('script');
       script.type = 'text/javascript';
-      script.src = this.state.scripts[key];
+      script.src = scripts[key];
+      script.setAttribute(SCRIPT_KEY, true);
       document.head.appendChild(script);
-      scripts.push(script.src);
+      addedScripts.push(script.src);
     }
-    alert(`Injected the following scripts: ${scripts.join(', \n')}`);
+    saveToLocalStorage();
+    // alert(`Injected the following scripts: ${addedScripts.join(', \n')}`);
   };
 
-  renderInputFields = () => {
+  const renderInputFields = () => {
     const nodes = [];
-    for (let i = 0; i < this.state.numScripts; i++) {
+    for (let i = 0; i < numScripts; i++) {
       nodes.push(
         <input
           key={i}
           type="text"
-          placeholder="Enter the script here"
-          onChange={e => this.handleInputChange(e, i)}
+          value={scripts[i] || ''}
+          placeholder="Enter the CDN link here..."
+          onChange={e => handleInputChange(e, i)}
         />
       );
     }
     return nodes;
   };
 
-  render() {
-    return (
-      <Frame
-        head={[
-          <link
-            type="text/css"
-            rel="stylesheet"
-            href={chrome.runtime.getURL('/static/css/content.css')}
-          />
-        ]}
-      >
-        <FrameContextConsumer>
-          {// Callback is invoked with iframe's window and document instances
-          ({ document, window }) => {
-            // Render Children
-            console.log(document, window);
-            return (
-              <div className={'my-extension'}>
-                <div>
-                  {this.renderInputFields()}
-                  <button type="button" onClick={this.addScript}>
-                    Add Script
-                  </button>
-                  <button type="button" onClick={this.injectScripts}>
-                    Inject Scripts
-                  </button>
-                </div>
-              </div>
-            );
-          }}
-        </FrameContextConsumer>
-      </Frame>
-    );
-  }
-}
+  const saveToLocalStorage = () =>
+    localStorage.setItem(SCRIPT_KEY, JSON.stringify(scripts));
+
+  return (
+    <Frame
+      head={[
+        <link
+          type="text/css"
+          rel="stylesheet"
+          href={'https://fonts.googleapis.com/css?family=Lato&display=swap'}
+        />,
+        <link
+          type="text/css"
+          rel="stylesheet"
+          href={chrome.runtime.getURL('/static/css/content.css')}
+        />
+      ]}
+    >
+      <FrameContextConsumer>
+        {// Callback is invoked with iframe's window and document instances
+        ({ document, window }) => {
+          // Render Children
+          console.log('Re-rendering');
+          return (
+            <div className="container">
+              <div className="inputfield-container">{renderInputFields()}</div>
+
+              <button type="button" onClick={addScript}>
+                Add Another Script
+              </button>
+              <button type="button" onClick={injectScriptsIntoDOM}>
+                Inject Scripts
+              </button>
+            </div>
+          );
+        }}
+      </FrameContextConsumer>
+    </Frame>
+  );
+};
 
 const app = document.createElement('div');
 app.id = 'my-extension-root';
